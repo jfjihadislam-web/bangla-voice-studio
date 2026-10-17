@@ -1,0 +1,262 @@
+
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#10131c">
+<title>Bangla Voice Studio</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 20px 14px;
+  background: #10131c;
+  color: #f5f6ff;
+  font-family: system-ui, sans-serif;
+}
+
+main {
+  max-width: 520px;
+  margin: auto;
+}
+
+header {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.logo {
+  font-size: 48px;
+}
+
+h1 {
+  font-size: 27px;
+  margin: 8px 0;
+}
+
+p {
+  color: #b5bfd5;
+  line-height: 1.7;
+}
+
+.card {
+  background: #1a2030;
+  border: 1px solid #30394d;
+  border-radius: 18px;
+  padding: 18px;
+  margin: 16px 0;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  margin: 14px 0 8px;
+}
+
+textarea {
+  width: 100%;
+  min-height: 130px;
+  resize: vertical;
+  background: #101521;
+  color: white;
+  border: 1px solid #39445b;
+  border-radius: 12px;
+  padding: 13px;
+  font: 16px system-ui, sans-serif;
+}
+
+input[type="file"] {
+  width: 100%;
+  color: white;
+  font-size: 14px;
+}
+
+button {
+  width: 100%;
+  padding: 13px;
+  margin-top: 12px;
+  border: 0;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  background: #a394ff;
+  color: #111326;
+}
+
+button.secondary {
+  background: #30394d;
+  color: white;
+}
+
+audio {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.small {
+  font-size: 13px;
+}
+
+#status {
+  overflow-wrap: anywhere;
+}
+
+footer {
+  text-align: center;
+  padding: 20px 0;
+  color: #b5bfd5;
+}
+</style>
+</head>
+
+<body>
+<main>
+
+<header>
+  <div class="logo">🎙️</div>
+  <h1>Bangla Voice Studio</h1>
+  <p>তোমার বাংলা AI Voice Studio</p>
+</header>
+
+<section class="card">
+  <h2>01 · Voice Sample</h2>
+  <p>নিজের অথবা অনুমতি নেওয়া কণ্ঠের অডিও বেছে নাও।</p>
+
+  <label for="sample">অডিও নমুনা নির্বাচন করো</label>
+  <input id="sample" type="file" accept="audio/*">
+
+  <audio id="player" controls hidden></audio>
+
+  <p class="small">
+    এখানে নমুনা আপলোড ও শোনা যাবে।
+    এখনো কণ্ঠ ক্লোন করা হচ্ছে না।
+  </p>
+</section>
+
+<section class="card">
+  <h2>02 · Text to Speech</h2>
+
+  <label for="words">বাংলা টেক্সট লেখো</label>
+  <textarea id="words" maxlength="1500"
+    placeholder="এখানে তোমার বাংলা লেখা লিখো..."></textarea>
+
+  <button id="generate">🔊 বাংলা কণ্ঠে শোনো</button>
+  <button id="stop" class="secondary">⏹️ থামাও</button>
+
+  <p id="status" role="status">
+    তোমার লেখা এখানে শোনার জন্য প্রস্তুত।
+  </p>
+
+  <p class="small">
+    এই সুবিধা ফোনের ব্রাউজারে উপলব্ধ Speech Synthesis
+    কণ্ঠ ব্যবহার করে। এটি AI voice cloning নয়।
+  </p>
+</section>
+
+<footer>
+  Bangla Voice Studio · Version 1.0
+</footer>
+
+</main>
+
+<script>
+const sample = document.getElementById("sample");
+const player = document.getElementById("player");
+const words = document.getElementById("words");
+const status = document.getElementById("status");
+
+let audioURL = null;
+
+sample.addEventListener("change", function () {
+  if (audioURL) {
+    URL.revokeObjectURL(audioURL);
+    audioURL = null;
+  }
+
+  const file = sample.files[0];
+
+  if (!file) {
+    player.hidden = true;
+    player.removeAttribute("src");
+    return;
+  }
+
+  audioURL = URL.createObjectURL(file);
+  player.src = audioURL;
+  player.hidden = false;
+  status.textContent = "অডিও নমুনা প্রস্তুত।";
+});
+
+document.getElementById("generate").addEventListener("click", function () {
+  const text = words.value.trim();
+
+  if (!text) {
+    status.textContent = "আগে কিছু বাংলা টেক্সট লেখো।";
+    return;
+  }
+
+  if (!("speechSynthesis" in window)) {
+    status.textContent =
+      "এই ব্রাউজারে টেক্সট-টু-স্পিচ সমর্থিত নয়।";
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "bn-BD";
+  utterance.rate = 0.9;
+  utterance.pitch = 1;
+
+  const voices = window.speechSynthesis.getVoices();
+
+  const bengaliVoice = voices.find(function (voice) {
+    return voice.lang.toLowerCase().startsWith("bn");
+  });
+
+  if (bengaliVoice) {
+    utterance.voice = bengaliVoice;
+  }
+
+  utterance.onstart = function () {
+    status.textContent =
+      "কণ্ঠ চলছে। এটি ফোনের উপলব্ধ কণ্ঠ, ক্লোন করা কণ্ঠ নয়।";
+  };
+
+  utterance.onend = function () {
+    status.textContent = "শোনা শেষ হয়েছে।";
+  };
+
+  utterance.onerror = function () {
+    status.textContent =
+      "কণ্ঠ চালানো যায়নি। ব্রাউজার ও ভাষা-সাপোর্ট পরীক্ষা করো।";
+  };
+
+  window.speechSynthesis.speak(utterance);
+});
+
+document.getElementById("stop").addEventListener("click", function () {
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+
+  status.textContent = "কণ্ঠ থামানো হয়েছে।";
+});
+
+if ("speechSynthesis" in window) {
+  window.speechSynthesis.getVoices();
+
+  window.speechSynthesis.onvoiceschanged = function () {
+    window.speechSynthesis.getVoices();
+  };
+}
+</script>
+
+</body>
+    </html>
+    
